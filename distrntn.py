@@ -5,20 +5,26 @@ import time
 import optparse
 import random
 import numpy as np
+import ConfigParser
 
-# Path for spark source folder
-#os.environ['SPARK_HOME']="/usr/local/Cellar/apache-spark/1.3.1"
+#Load config parameters
+config = ConfigParser.ConfigParser()
+config.readfp(open(r'config'))
+DeepdistPath = config.get('Deepdist', 'DeepdistPath')
+RNTNtPath = config.get('RNTN', 'RNTNPath')
+SparkPythonPath = config.get('Spark', 'SparkPythonPath')
+Py4jPath = config.get('Spark', 'Py4jPath')
+# Set heap space size for java
 os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
 
 
 # Append pyspark,deepdist and rntn  to Python Path
-sys.path.append("/Users/William/workspace2/deepdist/deepdist")
-sys.path.append("/Users/William/workspace2/semantic_rntn")
-sys.path.append("/usr/local/Cellar/apache-spark/1.3.1/libexec/python/")
-sys.path.append("/usr/local/Cellar/apache-spark/1.3.1/libexec/python/lib/py4j-0.8.2.1-src.zip")
-#sys.path.append("/Library/Python/2.6/site-packages")
-os.environ["PYTHONPATH"] += os.pathsep + "/Users/William/workspace2/deepdist/deepdist"
-os.environ["PYTHONPATH"] += os.pathsep + "/Users/William/workspace2/semantic_rntn"
+sys.path.append(DeepdistPath)
+sys.path.append(RNTNtPath)
+sys.path.append(SparkPythonPath)
+sys.path.append(Py4jPath)
+os.environ["PYTHONPATH"] += os.pathsep + DeepdistPath
+os.environ["PYTHONPATH"] += os.pathsep + RNTNtPath
 print os.environ["PYTHONPATH"]
 
 

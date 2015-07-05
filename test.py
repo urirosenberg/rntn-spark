@@ -5,7 +5,15 @@ import time
 import optparse
 import cPickle as pickle
 import cloudpickle as pickle2
+import ConfigParser
 
+
+config = ConfigParser.ConfigParser()
+config.readfp(open(r'config'))
+path1 = config.get('My Section', 'path1')
+
+
+'''
 # Path for spark source folder
 #os.environ['SPARK_HOME']="/usr/local/Cellar/apache-spark/1.3.1"
 os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
@@ -102,4 +110,5 @@ sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
 
 pmodel = pickle2.dumps(sgd.model, -1)
 pmodel2 = pickle.loads(pmodel)
+'''
 sys.exit("program done")
