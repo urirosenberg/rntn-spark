@@ -1,4 +1,4 @@
-__author__ = 'William'
+__author__ = 'Uri'
 import os
 import sys
 import time
@@ -64,7 +64,10 @@ except ImportError as e:
 #make sure all modules imported
 time.sleep(3)
 
-#setup args
+'''
+Setup args for sgd.
+Note: Since Deepdist implements stochastic gradient descent the model type (optimizer) has to be sgd.
+'''
 usage = "usage : %prog [options]"
 parser = optparse.OptionParser(usage=usage)
 parser.add_option("--test",action="store_true",dest="test",default=False)
@@ -97,7 +100,7 @@ rnn.initParams()
 sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
     optimizer=opts.optimizer)
 
-
+#setup spark
 conf = (SparkConf()
         .setMaster("local[4]")
         .setAppName("deepdist test")
@@ -107,7 +110,10 @@ conf = (SparkConf()
 sc = SparkContext(conf=conf)
 
 
-
+'''
+Define the gradient and descent functions as required by DeepDist.
+For more info about gradient and descent functions, please see: http://www.deepdist.com
+'''
 def gradient(model, tree_data):  # executes on workers
     cost,grad = model.model.costAndGrad(tree_data)
     # compute exponentially weighted cost
@@ -137,7 +143,7 @@ with DeepDist(sgd) as dd:
         mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
         dd.train(mb_data, gradient, descent)
         print '****************** finished sgd iteration %s *************************'%sgd.it
-    #print dd.model.most_similar(positive=['woman', 'king'], negative=['man'])
+
 
 end = time.time()
 print "Time per minibatch : %f"%(end-start)
