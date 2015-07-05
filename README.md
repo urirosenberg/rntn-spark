@@ -22,7 +22,7 @@ Please bare in mind: This is a work in progress! This is, by no means, a downloa
   3. Run distrntn.py :-)
 
 ## Support
-Please use github's issues to report troubles.  
+Please use github's [issues](https://github.com/urirosenberg/rntn-spark/issues) to report troubles.  
 
 
 
