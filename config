@@ -7,3 +7,6 @@ RNTNPath = /Users/William/workspace2/semantic_rntn
 [Spark]
 SparkPythonPath = /usr/local/Cellar/apache-spark/1.3.1/libexec/python/
 Py4jPath = /usr/local/Cellar/apache-spark/1.3.1/libexec/python/lib/py4j-0.8.2.1-src.zip
+
+[distrntn]
+mode = local

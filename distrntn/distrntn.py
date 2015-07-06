@@ -14,6 +14,7 @@ DeepdistPath = config.get('Deepdist', 'DeepdistPath')
 RNTNtPath = config.get('RNTN', 'RNTNPath')
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
+mode = config.get('distrntn', 'mode')
 # Set heap space size for java
 os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
 
@@ -101,12 +102,18 @@ sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
     optimizer=opts.optimizer)
 
 #setup spark
-conf = (SparkConf()
-        .setMaster("local[4]")
-        .setAppName("deepdist test")
-        .set("spark.executor.memory", "1g")
-        .set("spark.driver.memory", "1g")
-        .set("spark.python.worker.memory", "1g"))
+if mode == "local":
+   conf = (SparkConf()
+           .setMaster("local[1]")
+           .setAppName("deepdist rntn")
+           .set("spark.executor.memory", "1g")
+           .set("spark.driver.memory", "1g")
+           .set("spark.python.worker.memory", "1g"))
+
+if mode == "cluster":
+   conf = (SparkConf()
+           .setAppName("deepdist rntn"))
+
 sc = SparkContext(conf=conf)
 
 
