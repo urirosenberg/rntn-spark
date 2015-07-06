@@ -43,7 +43,6 @@ except ImportError as e:
 ######## import deepdist ########
 try:
     from deepdist import DeepDist
-    from gensim.models.word2vec import Word2Vec
     print ("Successfully imported deepdist Modules")
 
 except ImportError as e:
