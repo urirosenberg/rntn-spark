@@ -16,6 +16,7 @@ config = ConfigParser.ConfigParser()
 config.readfp(open(r'config'))
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
+appname = config.get('Spark', 'appname')
 mode = config.get('distrntn', 'mode')
 
 sys.path.append(SparkPythonPath)
@@ -78,7 +79,6 @@ parser.add_option("--outFile",dest="outFile",type="string",
         default="models/distrntn.bin")
 parser.add_option("--inFile",dest="inFile",type="string",
         default="models/distrntn.bin")
-#parser.add_option("--data",dest="data",type="string",default="train")
 parser.add_option("--data",dest="data",type="string",default="train")
 (opts,args)=parser.parse_args(None)
 
@@ -101,14 +101,14 @@ if mode == "local":
    os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
    conf = (SparkConf()
            .setMaster("local[1]")
-           .setAppName("deepdist rntn")
+           .setAppName(appname)
            .set("spark.executor.memory", "1g")
            .set("spark.driver.memory", "1g")
            .set("spark.python.worker.memory", "1g"))
 
 if mode == "cluster":
    conf = (SparkConf()
-           .setAppName("deepdist rntn: batch cluster"))
+           .setAppName(appname))
 
 sc = SparkContext(conf=conf)
 
