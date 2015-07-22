@@ -6,26 +6,20 @@ import optparse
 import random
 import numpy as np
 import ConfigParser
+import socket
+import pickle
+
+print ("Running on %s"%socket.gethostname())
 
 #Load config parameters
 config = ConfigParser.ConfigParser()
 config.readfp(open(r'config'))
-DeepdistPath = config.get('Deepdist', 'DeepdistPath')
-RNTNtPath = config.get('RNTN', 'RNTNPath')
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
 mode = config.get('distrntn', 'mode')
-# Set heap space size for java
-os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
 
-
-# Append pyspark,deepdist and rntn  to Python Path
-sys.path.append(DeepdistPath)
-sys.path.append(RNTNtPath)
 sys.path.append(SparkPythonPath)
 sys.path.append(Py4jPath)
-os.environ["PYTHONPATH"] += os.pathsep + DeepdistPath
-os.environ["PYTHONPATH"] += os.pathsep + RNTNtPath
 print os.environ["PYTHONPATH"]
 
 
@@ -52,9 +46,9 @@ except ImportError as e:
 
 ######## import rntn ########
 try:
-    import rntn as nnet
-    import tree as tr
-    import sgd as optimizer
+    from semantic_rntn import rntn as nnet
+    from semantic_rntn import tree as tr
+    from semantic_rntn import sgd as optimizer
     print ("Successfully imported rntn Modules")
 
 except ImportError as e:
@@ -62,7 +56,7 @@ except ImportError as e:
     sys.exit(1)
 
 #make sure all modules imported
-time.sleep(3)
+time.sleep(8)
 
 '''
 Setup args for sgd.
@@ -73,7 +67,7 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option("--test",action="store_true",dest="test",default=False)
 
 # Optimizer
-parser.add_option("--minibatch",dest="minibatch",type="int",default=30)
+parser.add_option("--minibatch",dest="minibatch",type="int",default=8544)
 parser.add_option("--optimizer",dest="optimizer",type="string",
         default="sgd")
 parser.add_option("--epochs",dest="epochs",type="int",default=50)
@@ -81,9 +75,10 @@ parser.add_option("--step",dest="step",type="float",default=1e-2)
 parser.add_option("--outputDim",dest="outputDim",type="int",default=5)
 parser.add_option("--wvecDim",dest="wvecDim",type="int",default=30)
 parser.add_option("--outFile",dest="outFile",type="string",
-        default="models/test.bin")
+        default="models/distrntn.bin")
 parser.add_option("--inFile",dest="inFile",type="string",
-        default="models/test.bin")
+        default="models/distrntn.bin")
+#parser.add_option("--data",dest="data",type="string",default="train")
 parser.add_option("--data",dest="data",type="string",default="train")
 (opts,args)=parser.parse_args(None)
 
@@ -102,6 +97,8 @@ sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
 
 #setup spark
 if mode == "local":
+   # Set heap space size for java
+   os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
    conf = (SparkConf()
            .setMaster("local[1]")
            .setAppName("deepdist rntn")
@@ -111,7 +108,7 @@ if mode == "local":
 
 if mode == "cluster":
    conf = (SparkConf()
-           .setAppName("deepdist rntn"))
+           .setAppName("deepdist rntn: batch cluster"))
 
 sc = SparkContext(conf=conf)
 
@@ -139,18 +136,28 @@ def descent(model, update):      # executes on master
     model.model.updateParams(scale,update,log=False)
 
 start = time.time()
-with DeepDist(sgd) as dd:
+with DeepDist(sgd,'n11.mta.ac.il:5000') as dd:
     print 'wait for server to come up'
-    time.sleep(3)
+    time.sleep(10)
     m = len(trees)
+    print 'number of trees: %s'%m
     random.shuffle(trees)
     for i in xrange(0,m-sgd.minibatch+1,sgd.minibatch):
         sgd.it += 1
         mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
+        starttrain= time.time()
         dd.train(mb_data, gradient, descent)
         print '****************** finished sgd iteration %s *************************'%sgd.it
-
+        endtrain= time.time()
+        print '******** time of iteration %f'%(endtrain-starttrain)
 
 end = time.time()
 print "Time per minibatch : %f"%(end-start)
+
+#output the final model to file
+with open(opts.outFile,'w') as fid:
+   pickle.dump(opts,fid)
+   pickle.dump(sgd.costt,fid)
+   rnn.toFile(fid)
+
 sys.exit("program done")
