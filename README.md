@@ -21,8 +21,9 @@ Please bare in mind: This is a work in progress! This is, by no means, a downloa
 4. rntn-spark
   1. Download/clone the [rntn-spark](https://github.com/urirosenberg/rntn-spark) project (this).
   2. In the configuration file: update the paths to Spark's python and py4j paths and set the app name.
-  3. upload to every node on your cluster 
-  4. 
+  3. Update the sparkrunner.sh script with your master address and port.
+  4. Run:  
+  ```sh sparkrunner.sh``
 
 ## Support
 Please use github's [issues](https://github.com/urirosenberg/rntn-spark/issues) to report troubles.  
