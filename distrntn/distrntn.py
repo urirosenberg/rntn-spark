@@ -139,20 +139,21 @@ start = time.time()
 with DeepDist(sgd,'n11.mta.ac.il:5000') as dd:
     print 'wait for server to come up'
     time.sleep(10)
-    m = len(trees)
-    print 'number of trees: %s'%m
-    random.shuffle(trees)
-    for i in xrange(0,m-sgd.minibatch+1,sgd.minibatch):
-        sgd.it += 1
-        mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
-        starttrain= time.time()
-        dd.train(mb_data, gradient, descent)
-        print '****************** finished sgd iteration %s *************************'%sgd.it
-        endtrain= time.time()
-        print '******** time of iteration %f'%(endtrain-starttrain)
+    #epoch loop
+    for e in range(opts.epochs):
+        startepoch = time.time()
+        print "Running epoch %d"%e
+        m = len(trees)
+        random.shuffle(trees)
+        for i in xrange(0,m-sgd.minibatch+1,sgd.minibatch):
+            sgd.it += 1
+            mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
+            dd.train(mb_data, gradient, descent)
+        endepoch= time.time()
+        print '******** time of iteration %f'%(endepoch-startepoch)
 
 end = time.time()
-print "Time per minibatch : %f"%(end-start)
+print "Total time: %f"%(end-start)
 
 #output the final model to file
 with open(opts.outFile,'w') as fid:
