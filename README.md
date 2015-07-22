@@ -15,7 +15,7 @@ Please bare in mind: This is a work in progress! This is, by no means, a downloa
 2. DeepDist
   1. At the moment, some updates are needed in order to run RNTN using DeepDist. Those updates are available from my forked Deepdist project. Until my pull requests are approved, Download/clone the forked [DeepDist](https://github.com/urirosenberg/deepdist) project. 
   2. Install by running:  
-  ```'python setup.py install```
+  ```python setup.py install```
 3. Spark
   1. Follow the instructions on Downloading and installing Spark from the [documentation](https://spark.apache.org/docs/latest/). Make sure you know the paths to pyspark and py4j. 
 4. rntn-spark
