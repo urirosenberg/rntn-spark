@@ -16,7 +16,7 @@ config = ConfigParser.ConfigParser()
 config.readfp(open(r'config'))
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
-appname = config.get('Spark', 'appname')
+appname = config.get('distrntn', 'appname')
 mode = config.get('distrntn', 'mode')
 
 sys.path.append(SparkPythonPath)
