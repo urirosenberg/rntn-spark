@@ -8,20 +8,21 @@ Please bare in mind: This is a work in progress! This is, by no means, a downloa
 
 ## pre-requites and setup instructions
 1. RNTN
-  1. Download/clone the forked [semantic-rntn](https://github.com/urirosenberg/semantic-rntn) project. This is based on the original [semantic-rntn](https://github.com/awni/semantic-rntn) project. The only difference is that I have taken the existing project and turned it into a module, thus enabling it to be installed and managed on all nodes of the cluster.
+  1. Download/clone the forked [semantic-rntn](https://github.com/urirosenberg/semantic-rntn) project ***to every node on your cluster***. This is based on the original [semantic-rntn](https://github.com/awni/semantic-rntn) project. The only difference is that I have taken the existing project and turned it into a module, thus enabling it to be installed and managed on all nodes of the cluster.
   2. Install by running:  
   ```python setup.py install```
  
 2. DeepDist
-  1. At the moment, some updates are needed in order to run RNTN using DeepDist. Those updates are available from my forked Deepdist project. Until my pull requests are approved, Download/clone the forked [DeepDist](https://github.com/urirosenberg/deepdist) project. 
+  1. At the moment, some updates are needed in order to run RNTN using DeepDist. Those updates are available from my forked Deepdist project. Until my pull requests are approved, Download/clone the forked [DeepDist](https://github.com/urirosenberg/deepdist) project ***to every node on your cluster***. 
   2. Install by running:  
   ```python setup.py install```
 3. Spark
   1. Follow the instructions on Downloading and installing Spark from the [documentation](https://spark.apache.org/docs/latest/). Make sure you know the paths to pyspark and py4j. 
 4. rntn-spark
   1. Download/clone the [rntn-spark](https://github.com/urirosenberg/rntn-spark) project (this).
-  2. In the configuration file: update the paths where you downloaded the RNTN, DeepDist projects and Spark's python and py4j paths.
-  3. Run distrntn.py :-)
+  2. In the configuration file: update the paths to Spark's python and py4j paths and set the app name.
+  3. upload to every node on your cluster 
+  4. 
 
 ## Support
 Please use github's [issues](https://github.com/urirosenberg/rntn-spark/issues) to report troubles.  
