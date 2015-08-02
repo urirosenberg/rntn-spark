@@ -17,6 +17,7 @@ config.readfp(open(r'config'))
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
 appname = config.get('distrntn', 'appname')
+masterurl = config.get('distrntn', 'masterurl')
 mode = config.get('distrntn', 'mode')
 
 sys.path.append(SparkPythonPath)
@@ -98,7 +99,7 @@ sgd = optimizer.SGD(rnn,alpha=opts.step,minibatch=opts.minibatch,
 #setup spark
 if mode == "local":
    # Set heap space size for java
-   os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
+   #os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
    conf = (SparkConf()
            .setMaster("local[1]")
            .setAppName(appname)
@@ -136,7 +137,7 @@ def descent(model, update):      # executes on master
     model.model.updateParams(scale,update,log=False)
 
 start = time.time()
-with DeepDist(sgd,'n11.mta.ac.il:5000') as dd:
+with DeepDist(sgd,masterurl) as dd:
     print 'wait for server to come up'
     time.sleep(10)
     #epoch loop
