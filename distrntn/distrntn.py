@@ -8,12 +8,12 @@ import numpy as np
 import ConfigParser
 import socket
 import pickle
-
+import collections
 print ("Running on %s"%socket.gethostname())
 
 #Load config parameters
 config = ConfigParser.ConfigParser()
-config.readfp(open(r'config'))
+config.readfp(open(r'../config'))
 SparkPythonPath = config.get('Spark', 'SparkPythonPath')
 Py4jPath = config.get('Spark', 'Py4jPath')
 appname = config.get('distrntn', 'appname')
@@ -69,7 +69,7 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option("--test",action="store_true",dest="test",default=False)
 
 # Optimizer
-parser.add_option("--minibatch",dest="minibatch",type="int",default=8544)
+parser.add_option("--minibatch",dest="minibatch",type="int",default=90)
 parser.add_option("--optimizer",dest="optimizer",type="string",
         default="sgd")
 parser.add_option("--epochs",dest="epochs",type="int",default=50)
@@ -101,7 +101,7 @@ if mode == "local":
    # Set heap space size for java
    #os.environ["_JAVA_OPTIONS"] = "-Xmx1g"
    conf = (SparkConf()
-           .setMaster("local[1]")
+           .setMaster("local[*]")
            .setAppName(appname)
            .set("spark.executor.memory", "1g")
            .set("spark.driver.memory", "1g")
@@ -119,22 +119,79 @@ Define the gradient and descent functions as required by DeepDist.
 For more info about gradient and descent functions, please see: http://www.deepdist.com
 '''
 def gradient(model, tree_data):  # executes on workers
-    cost,grad = model.model.costAndGrad(tree_data)
-    # compute exponentially weighted cost
-    if np.isfinite(cost):
-        if (model.it > 1 and  len(model.expcost) > 0):
-            model.expcost.append(.01*cost + .99*model.expcost[-1])
-        else:
-            model.expcost.append(cost)
+    """
+    Each datum in the minibatch is a tree.
+    Forward prop each tree.
+    Backprop each tree.
+    Returns
+       cost
+       Gradient w.r.t. W, Ws, b, bs
+       Gradient w.r.t. L in sparse form.
+    """
+    tree_data=list(tree_data)
+    datasize=len(tree_data)
+    print "-----Running gradient. data size is %s of type %s-------"%(datasize,type(tree_data))
+    if datasize == 0:
+        return []
+    cost = 0.0
+    correct = 0.0
+    total = 0.0
 
-        if model.optimizer == 'sgd':
-            update = grad
-            scale = -model.alpha
-    return update
+
+
+    model.model.L,model.model.V,model.model.W,model.model.b,model.model.Ws,model.model.bs = model.model.stack
+    # Zero gradients
+    model.model.dV[:] = 0
+    model.model.dW[:] = 0
+    model.model.db[:] = 0
+    model.model.dWs[:] = 0
+    model.model.dbs[:] = 0
+    model.model.dL = collections.defaultdict(model.model.defaultVec)
+
+
+    # Forward prop each tree in minibatch
+    for tree in tree_data:
+        c,corr,tot =  model.model.forwardProp(tree.root)
+        cost += c
+        correct += corr
+        total += tot
+
+    # Back prop each tree in minibatch
+    for tree in tree_data:
+        model.model.backProp(tree.root)
+
+    # scale cost and grad by mb size ************************88
+    #scale = (1./model.model.mbSize)
+    scale = (1./datasize)
+    for v in model.model.dL.itervalues():
+        v *=scale
+
+    # Add L2 Regularization
+    cost += (model.model.rho/2)*np.sum(model.model.V**2)
+    cost += (model.model.rho/2)*np.sum(model.model.W**2)
+    cost += (model.model.rho/2)*np.sum(model.model.Ws**2)
+
+    return [scale*cost,[model.model.dL,scale*(model.model.dV+model.model.rho*model.model.V),
+                       scale*(model.model.dW + model.model.rho*model.model.W),scale*model.model.db,
+                       scale*(model.model.dWs+model.model.rho*model.model.Ws),scale*model.model.dbs]]
 
 def descent(model, update):      # executes on master
-    scale = -model.alpha
-    model.model.updateParams(scale,update,log=False)
+    if len(update) != 0:
+        cost=update[0]
+        print "***************** cost: %s"%cost
+        grad=update[1]
+        scale = -model.alpha
+        # compute exponentially weighted cost
+        if np.isfinite(cost):
+            if (model.it > 1 and  len(model.expcost) > 0):
+                model.expcost.append(.01*cost + .99*model.expcost[-1])
+            else:
+                model.expcost.append(cost)
+
+            if model.optimizer == 'sgd':
+                update = grad
+                scale = -model.alpha
+        model.model.updateParams(scale,update,log=True)
 
 start = time.time()
 with DeepDist(sgd,masterurl) as dd:
