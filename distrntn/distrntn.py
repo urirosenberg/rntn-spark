@@ -69,10 +69,10 @@ parser = optparse.OptionParser(usage=usage)
 parser.add_option("--test",action="store_true",dest="test",default=False)
 
 # Optimizer
-parser.add_option("--minibatch",dest="minibatch",type="int",default=90)
+parser.add_option("--minibatch",dest="minibatch",type="int",default=60)
 parser.add_option("--optimizer",dest="optimizer",type="string",
         default="sgd")
-parser.add_option("--epochs",dest="epochs",type="int",default=50)
+parser.add_option("--epochs",dest="epochs",type="int",default=1)
 parser.add_option("--step",dest="step",type="float",default=1e-2)
 parser.add_option("--outputDim",dest="outputDim",type="int",default=5)
 parser.add_option("--wvecDim",dest="wvecDim",type="int",default=30)
@@ -189,9 +189,15 @@ def descent(model, update):      # executes on master
                 model.expcost.append(cost)
 
             if model.optimizer == 'sgd':
-                update = grad
+                #update = grad
                 scale = -model.alpha
-        model.model.updateParams(scale,update,log=True)
+
+        model.model.stack[1:] = [P+scale*dP for P,dP in zip(model.model.stack[1:],grad[1:])]
+        #model.model.updateParams(scale,grad,log=False)
+        # handle dictionary update sparsely
+        dL = grad[0]
+        for j in dL.iterkeys():
+            model.model.L[:,j] += scale*dL[j]
 
 start = time.time()
 with DeepDist(sgd,masterurl) as dd:
@@ -203,7 +209,7 @@ with DeepDist(sgd,masterurl) as dd:
         print "Running epoch %d"%e
         m = len(trees)
         random.shuffle(trees)
-        for i in xrange(0,m-sgd.minibatch+1,sgd.minibatch):
+        for i in xrange(0,100,sgd.minibatch):
             sgd.it += 1
             mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
             dd.train(mb_data, gradient, descent)
