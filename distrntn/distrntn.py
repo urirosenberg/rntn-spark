@@ -71,8 +71,8 @@ parser.add_option("--test",action="store_true",dest="test",default=False)
 # Optimizer
 parser.add_option("--minibatch",dest="minibatch",type="int",default=60)
 parser.add_option("--optimizer",dest="optimizer",type="string",
-        default="sgd")
-parser.add_option("--epochs",dest="epochs",type="int",default=1)
+        default="adagrad")
+parser.add_option("--epochs",dest="epochs",type="int",default=10)
 parser.add_option("--step",dest="step",type="float",default=1e-2)
 parser.add_option("--outputDim",dest="outputDim",type="int",default=5)
 parser.add_option("--wvecDim",dest="wvecDim",type="int",default=30)
@@ -130,7 +130,6 @@ def gradient(model, tree_data):  # executes on workers
     """
     tree_data=list(tree_data)
     datasize=len(tree_data)
-    print "-----Running gradient. data size is %s of type %s-------"%(datasize,type(tree_data))
     if datasize == 0:
         return []
     cost = 0.0
@@ -155,7 +154,6 @@ def gradient(model, tree_data):  # executes on workers
         cost += c
         correct += corr
         total += tot
-
     # Back prop each tree in minibatch
     for tree in tree_data:
         model.model.backProp(tree.root)
@@ -171,15 +169,19 @@ def gradient(model, tree_data):  # executes on workers
     cost += (model.model.rho/2)*np.sum(model.model.W**2)
     cost += (model.model.rho/2)*np.sum(model.model.Ws**2)
 
+    model.message="updated in gardient"
+
     return [scale*cost,[model.model.dL,scale*(model.model.dV+model.model.rho*model.model.V),
                        scale*(model.model.dW + model.model.rho*model.model.W),scale*model.model.db,
-                       scale*(model.model.dWs+model.model.rho*model.model.Ws),scale*model.model.dbs]]
+                       scale*(model.model.dWs+model.model.rho*model.model.Ws),scale*model.model.dbs],model]
 
 def descent(model, update):      # executes on master
     if len(update) != 0:
         cost=update[0]
-        print "***************** cost: %s"%cost
         grad=update[1]
+        updatedModel=update[2]
+        model.model.stack=updatedModel.model.stack
+
         scale = -model.alpha
         # compute exponentially weighted cost
         if np.isfinite(cost):
@@ -191,13 +193,33 @@ def descent(model, update):      # executes on master
             if model.optimizer == 'sgd':
                 #update = grad
                 scale = -model.alpha
+            elif model.optimizer == 'adagrad':
+                # trace = trace+grad.^2
+                model.gradt[1:] = [gt+g**2
+                        for gt,g in zip(model.gradt[1:],grad[1:])]
+                # update = grad.*trace.^(-1/2)
+                update =  [g*(1./np.sqrt(gt))
+                        for gt,g in zip(model.gradt[1:],grad[1:])]
+                # handle dictionary separately
+                dL = grad[0]
+                dLt = model.gradt[0]
+                for j in dL.iterkeys():
+                    dLt[:,j] = dLt[:,j] + dL[j]**2
+                    dL[j] = dL[j] * (1./np.sqrt(dLt[:,j]))
+                update = [dL] + update
+                scale = -model.alpha
 
+        #update params
         model.model.stack[1:] = [P+scale*dP for P,dP in zip(model.model.stack[1:],grad[1:])]
         #model.model.updateParams(scale,grad,log=False)
         # handle dictionary update sparsely
         dL = grad[0]
         for j in dL.iterkeys():
             model.model.L[:,j] += scale*dL[j]
+
+        model.costt.append(cost)
+        if model.it%1 == 0:
+            print "Iter %d : Cost=%.4f, ExpCost=%.4f."%(model.it,cost,model.expcost[-1])
 
 start = time.time()
 with DeepDist(sgd,masterurl) as dd:
@@ -209,7 +231,7 @@ with DeepDist(sgd,masterurl) as dd:
         print "Running epoch %d"%e
         m = len(trees)
         random.shuffle(trees)
-        for i in xrange(0,100,sgd.minibatch):
+        for i in xrange(0,240,sgd.minibatch):
             sgd.it += 1
             mb_data = sc.parallelize(trees[i:i+sgd.minibatch])
             dd.train(mb_data, gradient, descent)
